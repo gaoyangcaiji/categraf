@@ -7,17 +7,17 @@ labels = { instance="mongo-cluster-01" }
 
 # mongodb dsn, see https://www.mongodb.com/docs/manual/reference/connection-string/
 # mongodb_uri = "mongodb://127.0.0.1:27017"
-mongodb_uri = ""
+mongodb_uri = "mongodb://localhost:27017"
 # if you don't specify the username or password in the mongodb_uri, you can set here. 
 # This will overwrite the dsn, it would be helpful when special characters existing in the username or password and you don't want to encode them.
 # NOTICE! this user must be granted enough rights to query needed stats, see ../inputs/mongodb/README.md
-username = "username@Bj"
-password = "password@Bj"
+# username = "username@Bj"
+# password = "password@Bj"
 # if set to true, use the direct connection way
 # direct_connect = true
 
 # collect all means you collect all the metrics, if set, all below enable_xxx flags in this section will be ignored
-collect_all = true
+# collect_all = true
 # if set to true, collect databases metrics
 # enable_db_stats = true
 # if set to true, collect getDiagnosticData metrics
@@ -25,7 +25,7 @@ collect_all = true
 # if set to true, collect replSetGetStatus metrics
 # enable_replicaset_status = true
 # if set to true, collect top metrics by admin command
-# enable_top_metrics = true
+enable_top_metrics = true
 # if set to true, collect index metrics. You should specify one of the coll_stats_namespaces and the discovering_mode flags.
 # enable_index_stats = true
 # if set to true, collect collections metrics. You should specify one of the coll_stats_namespaces and the discovering_mode flags.
@@ -55,3 +55,21 @@ collect_all = true
 # mongodb_uri = "mongodb://username:password@127.0.0.1:27017"
 # collect_all = true
 # compatible_mode = true
+
+#[[instances.queries]]
+# mesurement = "cert_expires"
+# metric_fields = [ "expire_date" ]
+# timeout = "3s"
+# request = '''
+#SELECT expire_date FROM information_schema.innodb_trx WHERE trx_state='LOCK WAIT'
+#'''
+
+[[instances.queries]]
+mesurement = "resource_expired"
+label_fields = [ "operation_time","user" ]
+filter = '''{}'''
+enable_expired_time_filter = true
+# field_to_append = ""
+timeout = "3s"
+database="cmdb"
+collections=["cc_AuditLog"]

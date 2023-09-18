@@ -48,6 +48,8 @@ type Opts struct {
 	Username string
 	Password string
 
+	Queries []QueryConfig
+
 	// Only get stats for the collections matching this list of namespaces.
 	// Example: db1.col1,db.col1
 	CollStatsNamespaces           []string
@@ -169,6 +171,12 @@ func (e *Exporter) initCollectors(ctx context.Context, client *mongo.Client) err
 		ddc := newDiagnosticDataCollector(ctx, client, e.opts.Logger,
 			e.opts.CompatibleMode, topologyInfo)
 		e.cs = append(e.cs, ddc)
+	}
+
+	//Enable custom queries collector
+	if len(e.opts.Queries) > 0 {
+		qc := newCustomQueriesCollector(ctx, client, e.opts.Logger, e.opts.CompatibleMode, topologyInfo, e.opts.Queries)
+		e.cs = append(e.cs, qc)
 	}
 
 	// If we manually set the collection names we want or auto discovery is set.

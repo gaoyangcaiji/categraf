@@ -16,7 +16,8 @@ const inputName = "mongodb"
 
 type MongoDB struct {
 	config.PluginConfig
-	Instances []*Instance `toml:"instances"`
+	Instances []*Instance            `toml:"instances"`
+	Queries   []exporter.QueryConfig `toml:"queries"`
 }
 
 func init() {
@@ -57,6 +58,8 @@ type Instance struct {
 	config.InstanceConfig
 
 	LogLevel string `toml:"log_level"`
+
+	Queries []exporter.QueryConfig `toml:"queries"`
 
 	// Address (host:port) of MongoDB server.
 	MongodbURI                    string   `toml:"mongodb_uri,omitempty"`
@@ -100,6 +103,7 @@ func (ins *Instance) Init() error {
 		URI:                           string(ins.MongodbURI),
 		Username:                      ins.Username,
 		Password:                      ins.Password,
+		Queries:                       ins.Queries,
 		CollStatsNamespaces:           ins.CollStatsNamespaces,
 		IndexStatsCollections:         ins.IndexStatsCollections,
 		CollStatsLimit:                0,
@@ -133,4 +137,5 @@ func (ins *Instance) Gather(slist *types.SampleList) {
 	if err != nil {
 		log.Println("E! failed to collect metrics:", err)
 	}
+	//ins.gatherCustomQueries(slist, db, tags)
 }

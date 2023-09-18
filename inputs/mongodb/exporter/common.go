@@ -18,8 +18,10 @@ package exporter
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -227,4 +229,33 @@ func splitNamespace(ns string) (database, collection string) {
 	}
 
 	return parts[0], strings.Join(parts[1:], ".")
+}
+
+func parseToBsonD(query QueryConfig) (bson.D, error) {
+	var filterMap map[string]interface{}
+
+	// filterStr = strings.ReplaceAll(filterStr, "new Date()", "")
+	//filterStr = strings.ReplaceAll(filterStr, ")", "")
+
+	err := json.Unmarshal([]byte(query.Filter), &filterMap)
+	if err != nil {
+		return nil, err
+	}
+
+	filterDoc, err := bson.Marshal(bson.M(filterMap))
+	if err != nil {
+		return nil, err
+	}
+
+	var filterBsonD bson.D
+	err = bson.Unmarshal(filterDoc, &filterBsonD)
+	if err != nil {
+		return nil, err
+	}
+
+	if query.EnableExpiredTimeFilter {
+		filterBsonD = append(filterBsonD, bson.E{Key: "expired_time", Value: bson.M{"$lte": time.Now()}})
+	}
+
+	return filterBsonD, nil
 }
