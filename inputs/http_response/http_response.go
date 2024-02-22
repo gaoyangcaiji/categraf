@@ -1,6 +1,7 @@
 package http_response
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,6 +52,8 @@ type Instance struct {
 
 	// Mappings Set the mapping of extra tags in batches
 	Mappings map[string]map[string]string `toml:"mappings"`
+
+	regularExpression *regexp.Regexp `toml:"-"`
 }
 
 type httpClient interface {
@@ -88,6 +90,9 @@ func (ins *Instance) Init() error {
 	}
 	if ins.HTTPCommonConfig.Headers == nil {
 		ins.HTTPCommonConfig.Headers = make(map[string]string)
+	}
+	if len(ins.ExpectResponseRegularExpression) > 0 {
+		ins.regularExpression = regexp.MustCompile(ins.ExpectResponseRegularExpression)
 	}
 
 	return nil
@@ -180,7 +185,7 @@ func (ins *Instance) Gather(slist *types.SampleList) {
 }
 
 func (ins *Instance) gather(slist *types.SampleList, target string) {
-	if config.Config.DebugMode {
+	if ins.DebugMod {
 		log.Println("D! http_response... target:", target)
 	}
 
@@ -258,26 +263,27 @@ func (ins *Instance) httpGather(target string) (map[string]string, map[string]in
 		// metric: result_code
 		fields["result_code"] = ConnectionFailed
 
-		if timeoutError, ok := err.(net.Error); ok && timeoutError.Timeout() {
+		var netError net.Error
+		if errors.As(err, &netError) && netError.Timeout() {
 			fields["result_code"] = Timeout
 			return tags, fields, nil
 		}
 
-		if urlErr, isURLErr := err.(*url.Error); isURLErr {
-			if opErr, isNetErr := (urlErr.Err).(*net.OpError); isNetErr {
-				switch (opErr.Err).(type) {
-				case *net.DNSError:
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			var opErr *net.OpError
+			if errors.As(urlErr, &opErr) {
+				var dnsErr *net.DNSError
+				var parseErr *net.ParseError
+				if errors.As(opErr, &dnsErr) {
 					fields["result_code"] = DNSError
 					return tags, fields, nil
-				case *net.ParseError:
-					// Parse error has to do with parsing of IP addresses, so we
-					// group it with address errors
+				} else if errors.As(opErr, &parseErr) {
 					fields["result_code"] = AddressError
 					return tags, fields, nil
 				}
 			}
 		}
-
 		return tags, fields, nil
 	} else {
 		fields["result_code"] = Success
@@ -300,12 +306,14 @@ func (ins *Instance) httpGather(target string) (map[string]string, map[string]in
 		return tags, fields, nil
 	}
 
-	if !((len(ins.ExpectResponseSubstring) > 0 && strings.Contains(string(bs), ins.ExpectResponseSubstring)) || (len(ins.ExpectResponseRegularExpression) > 0 && regexp.MustCompile(ins.ExpectResponseRegularExpression).Match(bs))) {
+	if len(ins.ExpectResponseSubstring) > 0 && !strings.Contains(string(bs), ins.ExpectResponseSubstring) ||
+		ins.regularExpression != nil && !ins.regularExpression.Match(bs) {
 		log.Println("E! body mismatch, response body:", string(bs))
 		fields["result_code"] = BodyMismatch
 	}
 
-	if !((ins.ExpectResponseStatusCode != nil && *ins.ExpectResponseStatusCode == resp.StatusCode) || (len(ins.ExpectResponseStatusCodes) > 0 && strings.Contains(ins.ExpectResponseStatusCodes, strconv.Itoa(resp.StatusCode)))) {
+	if ins.ExpectResponseStatusCode != nil && *ins.ExpectResponseStatusCode != resp.StatusCode ||
+		len(ins.ExpectResponseStatusCodes) > 0 && !strings.Contains(ins.ExpectResponseStatusCodes, fmt.Sprintf("%d", resp.StatusCode)) {
 		log.Println("E! status code mismatch, response stats code:", resp.StatusCode)
 		fields["result_code"] = CodeMismatch
 	}

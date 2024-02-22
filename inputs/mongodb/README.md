@@ -1,6 +1,6 @@
 # mongodb
 
-mongodb 监控采集插件，由mongodb-exporter（https://github.com/percona/mongodb_exporter）封装而来。
+mongodb 监控采集插件，由mongodb-exporter（https://github.com/percona/mongodb_exporter） 封装而来。v0.3.30-v0.3.42从telegraf/mongodb fork。
 
 ## Configuration
 
@@ -29,4 +29,4 @@ mongodb 监控采集插件，由mongodb-exporter（https://github.com/percona/mo
 
 ## 监控大盘和告警规则
 
-同级目录下的 dashboard.json、alerts.json 可以直接导入夜莺使用。
+同级目录下的 dashboard.json、alerts.json 是大盘和告警规则, dashboard2.json 是v0.3.30版本以后的大盘。

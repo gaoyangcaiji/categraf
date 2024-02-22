@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	config "flashcat.cloud/categraf/config/logs"
+	"flashcat.cloud/categraf/config"
 	"flashcat.cloud/categraf/logs/message"
 )
 
@@ -96,7 +96,7 @@ func (a *RegistryAuditor) Stop() {
 func (a *RegistryAuditor) createChannels() {
 	a.chansMutex.Lock()
 	defer a.chansMutex.Unlock()
-	a.inputChan = make(chan *message.Message, config.ChanSize)
+	a.inputChan = make(chan *message.Message, config.ChanSize())
 	a.done = make(chan struct{})
 }
 
@@ -187,7 +187,7 @@ func (a *RegistryAuditor) recoverRegistry() map[string]*RegistryEntry {
 	mr, err := ioutil.ReadFile(a.registryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Println("I! Could not find state file at %q, will start with default offsets", a.registryPath)
+			log.Printf("I! Could not find state file at %q, will start with default offsets", a.registryPath)
 		} else {
 			log.Println("E!", err)
 		}

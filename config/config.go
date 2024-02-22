@@ -61,6 +61,8 @@ type WriterOption struct {
 	Timeout             int64 `toml:"timeout"`
 	DialTimeout         int64 `toml:"dial_timeout"`
 	MaxIdleConnsPerHost int   `toml:"max_idle_conns_per_host"`
+
+	tls.ClientConfig
 }
 
 type HTTP struct {
@@ -101,6 +103,7 @@ type ConfigType struct {
 	// from console args
 	ConfigDir    string
 	DebugMode    bool
+	DebugLevel   int
 	TestMode     bool
 	InputFilters string
 
@@ -121,7 +124,7 @@ type ConfigType struct {
 
 var Config *ConfigType
 
-func InitConfig(configDir string, debugMode, testMode bool, interval int64, inputFilters string) error {
+func InitConfig(configDir string, debugLevel int, debugMode, testMode bool, interval int64, inputFilters string) error {
 	configFile := path.Join(configDir, "config.toml")
 	if !file.IsExist(configFile) {
 		return fmt.Errorf("configuration file(%s) not found", configFile)
@@ -130,6 +133,7 @@ func InitConfig(configDir string, debugMode, testMode bool, interval int64, inpu
 	Config = &ConfigType{
 		ConfigDir:    configDir,
 		DebugMode:    debugMode,
+		DebugLevel:   debugLevel,
 		TestMode:     testMode,
 		InputFilters: inputFilters,
 	}

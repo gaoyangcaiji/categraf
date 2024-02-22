@@ -51,6 +51,8 @@ type Table struct {
 
 	filterFormat int                `toml:"-"`
 	filtersMap   map[string]*Filter `toml:"-"`
+
+	DebugMode bool
 }
 
 type Filter struct {
@@ -330,7 +332,7 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				} else if errors.Is(err, gosnmp.ErrDecryption) {
 					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
 				} else {
-					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+					return nil, fmt.Errorf("performing get on field %s(%s): %w", f.Name, oid, err)
 				}
 			} else if pkt != nil && len(pkt.Variables) > 0 {
 				ent := pkt.Variables[0]
@@ -379,6 +381,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
+						} else {
+							log.Printf("E! translate error:%s, entOid:%s, oid:%s", err, entOid, oid)
 						}
 					}
 				}
@@ -398,7 +402,10 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 				// If this error isn't a walkError, we know it's not
 				// from the callback
 				if _, ok := err.(*walkError); !ok {
-					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
+					log.Printf("E! snmp walk error:%s, oid:%s ", err, oid)
+					return nil, fmt.Errorf("performing bulk walk for field %s(%s): %w", f.Name, oid, err)
+				} else {
+					log.Printf("W! snmp walk error:%s, oid:%s", err, oid)
 				}
 			}
 		}
@@ -691,6 +698,66 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		}
 
 		return v, nil
+	}
+
+	// 55 57 57 51 46 56 32 77 66   may be the ascii arr for string ->  7993.8 MB
+	if conv == "asciitobytes" {
+
+		input, ok := v.([]uint8)
+		if !ok {
+			return nil, fmt.Errorf("invalid type of %v (not rune arr)", v)
+		}
+
+		// 将ascii字符切片转换为字符串
+		asciiStr := string(input)
+
+		// 提取数值
+		var numericStr string
+		for _, char := range asciiStr {
+			if char >= '0' && char <= '9' || char == '.' {
+				numericStr += string(char)
+			}
+		}
+
+		// 将字符串转换为浮点数
+		value, err := strconv.ParseFloat(numericStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid number part of %s", asciiStr)
+		}
+
+		// 解析单位并转换为字节数
+		unit := strings.ToUpper(strings.TrimSpace(strings.Trim(asciiStr, numericStr)))
+		var result float64
+		switch unit {
+		case "":
+			result = value
+		case "B":
+			result = value
+		case "KB":
+			result = value * 1000
+		case "MB":
+			result = value * 1000 * 1000
+		case "GB":
+			result = value * 1000 * 1000 * 1000
+		case "TB":
+			result = value * 1000 * 1000 * 1000 * 1000
+		case "PB":
+			result = value * 1000 * 1000 * 1000 * 1000 * 1000
+		case "KIB":
+			result = value * 1024
+		case "MIB":
+			result = value * 1024 * 1024
+		case "GIB":
+			result = value * 1024 * 1024 * 1024
+		case "TIB":
+			result = value * 1024 * 1024 * 1024 * 1024
+		case "PIB":
+			result = value * 1024 * 1024 * 1024 * 1024 * 1024
+		default:
+			return nil, fmt.Errorf("invalid unit of %s", unit)
+		}
+
+		return result, nil
 	}
 
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)

@@ -252,7 +252,7 @@ func (ins *Instance) getFilteredMetrics() ([]filteredMetric, error) {
 		metrics: metrics,
 	})
 
-	if config.Config.DebugMode {
+	if ins.DebugMod {
 		for _, m := range metrics {
 			log.Println("D!", m.Namespace, m.MetricName, m.Dimensions)
 		}
@@ -363,6 +363,9 @@ func (ins *Instance) makeLabels(point internalTypes.Point, labels ...map[string]
 	}
 	if len(point.NodeID) != 0 {
 		result["node_id"] = point.NodeID
+	}
+	if len(point.Device) != 0 {
+		result["device"] = point.Device
 	}
 	return result
 }

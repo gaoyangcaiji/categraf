@@ -15,7 +15,9 @@ import (
 	_ "flashcat.cloud/categraf/inputs/aliyun"
 	_ "flashcat.cloud/categraf/inputs/appdynamics"
 	_ "flashcat.cloud/categraf/inputs/arp_packet"
+	_ "flashcat.cloud/categraf/inputs/bind"
 	_ "flashcat.cloud/categraf/inputs/cadvisor"
+	_ "flashcat.cloud/categraf/inputs/chrony"
 	_ "flashcat.cloud/categraf/inputs/clickhouse"
 	_ "flashcat.cloud/categraf/inputs/cloudwatch"
 	_ "flashcat.cloud/categraf/inputs/conntrack"
@@ -41,12 +43,14 @@ import (
 	_ "flashcat.cloud/categraf/inputs/kernel"
 	_ "flashcat.cloud/categraf/inputs/kernel_vmstat"
 	_ "flashcat.cloud/categraf/inputs/kubernetes"
+	_ "flashcat.cloud/categraf/inputs/ldap"
 	_ "flashcat.cloud/categraf/inputs/linux_sysctl_fs"
 	_ "flashcat.cloud/categraf/inputs/logstash"
 	_ "flashcat.cloud/categraf/inputs/mem"
 	_ "flashcat.cloud/categraf/inputs/mongodb"
 	_ "flashcat.cloud/categraf/inputs/mtail"
 	_ "flashcat.cloud/categraf/inputs/mysql"
+	_ "flashcat.cloud/categraf/inputs/nats"
 	_ "flashcat.cloud/categraf/inputs/net"
 	_ "flashcat.cloud/categraf/inputs/net_response"
 	_ "flashcat.cloud/categraf/inputs/netstat"
@@ -54,6 +58,7 @@ import (
 	_ "flashcat.cloud/categraf/inputs/nfsclient"
 	_ "flashcat.cloud/categraf/inputs/nginx"
 	_ "flashcat.cloud/categraf/inputs/nginx_upstream_check"
+	_ "flashcat.cloud/categraf/inputs/node_exporter"
 	_ "flashcat.cloud/categraf/inputs/nsq"
 	_ "flashcat.cloud/categraf/inputs/ntp"
 	_ "flashcat.cloud/categraf/inputs/nvidia_smi"
@@ -71,12 +76,15 @@ import (
 	_ "flashcat.cloud/categraf/inputs/self_metrics"
 	_ "flashcat.cloud/categraf/inputs/smart"
 	_ "flashcat.cloud/categraf/inputs/snmp"
+	_ "flashcat.cloud/categraf/inputs/snmp_trap"
 	_ "flashcat.cloud/categraf/inputs/sockstat"
 	_ "flashcat.cloud/categraf/inputs/sqlserver"
 	_ "flashcat.cloud/categraf/inputs/switch_legacy"
 	_ "flashcat.cloud/categraf/inputs/system"
 	_ "flashcat.cloud/categraf/inputs/systemd"
+	_ "flashcat.cloud/categraf/inputs/tengine"
 	_ "flashcat.cloud/categraf/inputs/tomcat"
+	_ "flashcat.cloud/categraf/inputs/traffic_server"
 	_ "flashcat.cloud/categraf/inputs/vsphere"
 	_ "flashcat.cloud/categraf/inputs/whois"
 	_ "flashcat.cloud/categraf/inputs/xskyapi"
@@ -261,6 +269,11 @@ func (ma *MetricsAgent) inputGo(name string, sum string, input inputs.Input) {
 	if err = inputs.MayInit(input); err != nil {
 		if !errors.Is(err, types.ErrInstancesEmpty) {
 			log.Println("E! failed to init input:", name, "error:", err)
+		} else {
+			if config.Config.DebugMode {
+				_, inputKey := inputs.ParseInputName(name)
+				log.Println("W! no instances for input: ", inputKey)
+			}
 		}
 		return
 	}
